@@ -18,6 +18,10 @@ export const CONFIG = {
     pollTimeoutMs: 600_000,
     tokenScopes: ["repo", "workflow"],
     maxTreeFiles: 120,
+    allowedRepos: (process.env.GITHUB_ALLOWED_REPOS ?? "helloworldbyprince/verdict-demo")
+      .split(",")
+      .map((repo) => repo.trim().toLowerCase())
+      .filter(Boolean),
   },
   pipeline: {
     runTimeoutMs: 900_000,

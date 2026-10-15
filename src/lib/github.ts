@@ -28,8 +28,20 @@ export function parseRepoUrl(url: string): RepoRef {
   return { owner, repo };
 }
 
-export async function getRepoContext(repoUrl: string): Promise<RepoContext> {
+export function assertRepoAllowed(repoUrl: string) {
   const { owner, repo } = parseRepoUrl(repoUrl);
+  const slug = `${owner}/${repo}`.toLowerCase();
+  if (!CONFIG.github.allowedRepos.length) {
+    throw new Error("No GitHub repositories are allowlisted. Configure GITHUB_ALLOWED_REPOS before enabling live runs.");
+  }
+  if (!CONFIG.github.allowedRepos.includes(slug)) {
+    throw new Error(`Repository ${slug} is not authorized for VERDICT runs.`);
+  }
+  return { owner, repo };
+}
+
+export async function getRepoContext(repoUrl: string): Promise<RepoContext> {
+  const { owner, repo } = assertRepoAllowed(repoUrl);
   const meta = await github<{ default_branch: string }>(`/repos/${owner}/${repo}`);
   const branch = await github<{ commit: { sha: string } }>(`/repos/${owner}/${repo}/branches/${encodeURIComponent(meta.default_branch)}`);
   const tree = await github<{ tree: { path: string; type: string }[] }>(`/repos/${owner}/${repo}/git/trees/${branch.commit.sha}?recursive=1`);

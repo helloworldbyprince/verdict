@@ -9,8 +9,8 @@ import { VerdictCard } from "@/components/VerdictCard";
 import { CONFIG } from "@/lib/config";
 import type { RunState } from "@/lib/types";
 
-const fixture = { repoUrl: "https://github.com/prince/verdict-demo", bugDescription: "Discount is applied to qty - 1 items, so the final item in every cart line is charged at full price." };
-const honestyFixture = { repoUrl: "https://github.com/prince/verdict-demo", bugDescription: "The test fails because PAYMENT_API_KEY is missing from the environment. Prove whether a code patch can fix it." };
+const fixture = { repoUrl: "https://github.com/helloworldbyprince/verdict-demo", bugDescription: "Discount is applied to qty - 1 items, so the final item in every cart line is charged at full price." };
+const honestyFixture = { repoUrl: "https://github.com/helloworldbyprince/verdict-demo", bugDescription: "The test fails because PAYMENT_API_KEY is missing from the environment. Prove whether a code patch can fix it." };
 
 export default function DemoPage() {
   const [repoUrl, setRepoUrl] = useState("");
