@@ -3,6 +3,7 @@ import type { VerificationResult, Verdict } from "./types";
 export interface VerdictInput {
   timedOut?: boolean;
   checkConclusion?: string | null;
+  baselineObserved?: boolean;
   expectedFailures: string[];
   passingAfter: string[];
   newFailures: string[];
@@ -15,6 +16,7 @@ export function determineVerdict(input: VerdictInput): Verdict {
   );
   if (
     input.checkConclusion === "success" &&
+    input.baselineObserved !== false &&
     allTargetsPass &&
     input.newFailures.length === 0
   ) {

@@ -25,4 +25,10 @@ describe("GitHub repository allowlist", () => {
     expect(assertRepoAllowed("https://github.com/helloworldbyprince/verdict")).toEqual({ owner: "helloworldbyprince", repo: "verdict" });
     expect(() => assertRepoAllowed("https://github.com/helloworldbyprince/another-repo")).toThrow("not authorized");
   });
+
+  it("extracts every touched path from a unified diff", async () => {
+    const { getDiffPaths } = await import("./github");
+    const diff = "--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1 @@\n-old\n+new\n--- a/src/b.ts\n+++ b/src/b.ts\n@@ -1 +1 @@\n-x\n+y";
+    expect(getDiffPaths(diff)).toEqual(["src/a.ts", "src/b.ts"]);
+  });
 });

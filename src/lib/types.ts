@@ -22,6 +22,7 @@ export interface VerificationResult {
   newFailures: string[];
   conclusion?: string;
   detailsUrl?: string;
+  baselineObserved?: boolean;
   error?: string;
 }
 

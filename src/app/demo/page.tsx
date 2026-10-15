@@ -11,6 +11,9 @@ import type { RunState } from "@/lib/types";
 
 const fixture = { repoUrl: "https://github.com/helloworldbyprince/verdict", bugDescription: "Discount is applied to qty - 1 items, so the final item in every cart line is charged at full price." };
 const honestyFixture = { repoUrl: "https://github.com/helloworldbyprince/verdict", bugDescription: "The test fails because PAYMENT_API_KEY is missing from the environment. Prove whether a code patch can fix it." };
+const historyKey = "verdict.run-history.v1";
+
+type RunHistoryItem = Pick<RunState, "id" | "repoUrl" | "bugDescription" | "status" | "createdAt" | "mode"> & { verdict?: string };
 
 export default function DemoPage() {
   const [repoUrl, setRepoUrl] = useState("");
@@ -18,15 +21,27 @@ export default function DemoPage() {
   const [run, setRun] = useState<RunState | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
+  const [history, setHistory] = useState<RunHistoryItem[]>([]);
   const pollRef = useRef<number | undefined>(undefined);
 
-  useEffect(() => () => window.clearInterval(pollRef.current), []);
+  useEffect(() => {
+    try { setHistory(JSON.parse(window.localStorage.getItem(historyKey) ?? "[]") as RunHistoryItem[]); } catch { setHistory([]); }
+    return () => window.clearInterval(pollRef.current);
+  }, []);
+  function rememberRun(next: RunState) {
+    const item: RunHistoryItem = { id: next.id, repoUrl: next.repoUrl, bugDescription: next.bugDescription, status: next.status, createdAt: next.createdAt, mode: next.mode, verdict: next.verification?.verdict };
+    setHistory((current) => {
+      const updated = [item, ...current.filter((entry) => entry.id !== item.id)].slice(0, CONFIG.ui.pageSize);
+      window.localStorage.setItem(historyKey, JSON.stringify(updated));
+      return updated;
+    });
+  }
   async function poll(id: string) {
     const response = await fetch(`/api/runs/${id}`, { cache: "no-store" });
     if (!response.ok) throw new Error("Could not read the run state.");
     const next = await response.json() as RunState;
     setRun(next);
-    if (["complete", "error", "applied", "denied"].includes(next.status)) window.clearInterval(pollRef.current);
+    if (["complete", "error", "applied", "denied"].includes(next.status)) { window.clearInterval(pollRef.current); rememberRun(next); }
   }
   async function submit(event?: FormEvent, forceDemo = false) {
     event?.preventDefault(); setError(""); setStarting(true); setRun(null); window.clearInterval(pollRef.current);
@@ -69,6 +84,11 @@ export default function DemoPage() {
             <div className="flex flex-col-reverse justify-between gap-4 border-t border-border pt-6 sm:flex-row sm:items-center"><div className="flex flex-wrap gap-4"><button type="button" onClick={() => loadFixture(false)} className="inline-flex items-center gap-2 self-start text-xs text-blue hover:underline"><Play className="size-3.5 fill-current" /> Try the fixture repo</button><button type="button" onClick={() => loadFixture(true)} className="inline-flex items-center gap-2 self-start text-xs text-amber hover:underline"><Info className="size-3.5" /> Try the honesty case</button></div><button disabled={starting} className="group inline-flex h-13 items-center justify-center gap-2 rounded-xl bg-emerald px-6 text-sm font-semibold text-bg transition hover:bg-[#35d39c] disabled:cursor-not-allowed disabled:opacity-60">{starting ? <LoaderCircle className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />} Run the agents <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></button></div>
           </form>
           <div className="flex items-start gap-3 border-t border-border bg-blue/[.035] px-5 py-4 text-xs leading-5 text-muted sm:px-7"><Info className="mt-0.5 size-3.5 shrink-0 text-blue" /><span>No credentials yet? The interface automatically runs in showcase mode with representative agent outputs. Add the keys from <code className="mono text-text">.env.example</code> to switch on the live pipeline.</span></div>
+        </section>}
+
+        {!run && history.length > 0 && <section className="mt-8 rounded-2xl border border-border bg-surface/70 p-5 sm:p-7">
+          <div className="mb-4 flex items-center justify-between"><div><h2 className="text-sm font-semibold">Recent verdicts</h2><p className="mt-1 text-xs text-muted">Stored only in this browser.</p></div><button onClick={() => { window.localStorage.removeItem(historyKey); setHistory([]); }} className="text-xs text-muted hover:text-text">Clear history</button></div>
+          <div className="divide-y divide-border">{history.slice(0, 5).map((item) => <div key={item.id} className="grid gap-2 py-4 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-center"><div className="min-w-0"><p className="truncate text-sm font-medium">{item.bugDescription}</p><p className="mt-1 truncate font-mono text-[10px] text-muted">{item.repoUrl} · {item.id}</p></div><span className={`text-xs font-medium ${item.verdict === "PROVEN" ? "text-emerald" : item.verdict === "NOT_PROVEN" ? "text-amber" : "text-red"}`}>{item.verdict ?? item.status}</span></div>)}</div>
         </section>}
 
         {run && <div className="space-y-7">

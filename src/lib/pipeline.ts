@@ -63,7 +63,7 @@ async function livePipeline(id: string) {
   const pr = await createPatchPullRequest(context, id, diff, run.bugDescription.slice(0, 72));
   updateRun(id, { diff, branch: pr.branch, prNumber: pr.prNumber, prUrl: pr.prUrl }); updateStep(id, "patch", "done", `Opened draft PR #${pr.prNumber}`);
   updateStep(id, "verify", "running", "Waiting for deterministic GitHub Actions proof…");
-  const verification = await runVerifier(context, pr.sha, triage);
+  const verification = await runVerifier(context, pr.sha, pr.branch, context.headSha, triage);
   updateRun(id, { verification, status: "complete" }); updateStep(id, "verify", verification.verdict === "ERROR" ? "error" : "done", verification.verdict === "PROVEN" ? "All target tests pass with no new failures" : "CI could not prove the patch");
 }
 

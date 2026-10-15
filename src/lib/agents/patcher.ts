@@ -1,5 +1,5 @@
 import { CONFIG } from "../config";
-import { readFile, type RepoContext } from "../github";
+import { getDiffPaths, readFile, type RepoContext } from "../github";
 import { askNemotron } from "../nebius";
 import type { Evidence, TriageResult } from "../types";
 
@@ -12,5 +12,7 @@ export async function runPatcher(context: RepoContext, bugDescription: string, t
   });
   diff = diff.replace(/^```(?:diff)?\s*/i, "").replace(/\s*```$/, "").trim();
   if (diff.split("\n").length > CONFIG.pipeline.maxDiffLines) throw new Error(`Patch exceeds the ${CONFIG.pipeline.maxDiffLines}-line safety limit.`);
+  const unauthorized = getDiffPaths(diff).filter((path) => !triage.suspectedFiles.includes(path));
+  if (unauthorized.length) throw new Error(`Patch attempted to edit files outside triage scope: ${unauthorized.join(", ")}`);
   return diff;
 }

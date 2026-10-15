@@ -18,6 +18,8 @@ export const CONFIG = {
     pollTimeoutMs: 600_000,
     tokenScopes: ["repo", "workflow"],
     maxTreeFiles: 120,
+    maxTriageContextFiles: 8,
+    maxTriageFileChars: 12_000,
     allowedRepos: (process.env.GITHUB_ALLOWED_REPOS ?? "helloworldbyprince/verdict")
       .split(",")
       .map((repo) => repo.trim().toLowerCase())
@@ -26,6 +28,7 @@ export const CONFIG = {
   pipeline: {
     runTimeoutMs: 900_000,
     maxDiffLines: 200,
+    maxResearchQueries: 3,
   },
   ui: {
     pageSize: 50,

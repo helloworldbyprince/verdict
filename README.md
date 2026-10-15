@@ -38,9 +38,10 @@ NEBIUS_MODEL_FAST=
 TAVILY_API_KEY=
 GITHUB_TOKEN=
 GITHUB_OWNER=
+GITHUB_ALLOWED_REPOS=helloworldbyprince/verdict
 ```
 
-Do not invent the Nemotron model IDs. Copy the currently available strong and fast model IDs from the Nebius Token Factory playground. The GitHub token needs `repo` and `workflow` scopes for branch, draft PR, Actions, and merge operations.
+Do not invent the Nemotron model IDs. Copy the currently available strong and fast model IDs from the Nebius Token Factory playground. Use a fine-grained GitHub token restricted to the allowlisted repository. It needs Contents and Pull Requests read/write plus Checks and Actions read access. `GITHUB_ALLOWED_REPOS` is a comma-separated server-side safety boundary; requests for any other repository are rejected before an agent runs.
 
 Test the configured fast model with:
 

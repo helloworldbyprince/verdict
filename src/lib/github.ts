@@ -57,9 +57,13 @@ export async function readFile(repo: RepoRef, path: string, ref: string) {
   return Buffer.from(data.content.replace(/\n/g, ""), "base64").toString("utf8");
 }
 
+export async function readFiles(repo: RepoRef, paths: string[], ref: string) {
+  return Promise.all(paths.map(async (path) => ({ path, content: await readFile(repo, path, ref) })));
+}
+
 interface FilePatch { path: string; hunks: { oldStart: number; lines: string[] }[] }
 
-function parseUnifiedDiff(diff: string): FilePatch[] {
+export function parseUnifiedDiff(diff: string): FilePatch[] {
   const files: FilePatch[] = [];
   let current: FilePatch | undefined;
   for (const line of diff.split("\n")) {
@@ -77,6 +81,10 @@ function parseUnifiedDiff(diff: string): FilePatch[] {
   }
   if (!files.length) throw new Error("The model did not return a valid unified diff.");
   return files;
+}
+
+export function getDiffPaths(diff: string) {
+  return parseUnifiedDiff(diff).map((patch) => patch.path);
 }
 
 function applyPatch(source: string, patch: FilePatch) {
@@ -121,7 +129,22 @@ export async function createPatchPullRequest(context: RepoContext, runId: string
 }
 
 export async function getCheckRuns(repo: RepoRef, ref: string) {
-  return github<{ check_runs: { id: number; name: string; status: string; conclusion: string | null; details_url: string }[] }>(`/repos/${repo.owner}/${repo.repo}/commits/${encodeURIComponent(ref)}/check-runs`);
+  return github<{ check_runs: { id: number; name: string; status: string; conclusion: string | null; details_url: string }[] }>(`/repos/${repo.owner}/${repo.repo}/commits/${encodeURIComponent(ref)}/check-runs?per_page=100`);
+}
+
+export async function triggerTestWorkflow(repo: RepoRef, ref: string) {
+  const data = await github<{ workflows: { id: number; name: string; path: string; state: string }[] }>(`/repos/${repo.owner}/${repo.repo}/actions/workflows?per_page=100`);
+  const active = data.workflows.filter((workflow) => workflow.state === "active");
+  const workflow = active.find((item) => /(^|\b)(test|ci|verify|check)(\b|$)/i.test(`${item.name} ${item.path}`)) ?? active[0];
+  if (!workflow) return { triggered: false, reason: "No active GitHub Actions workflow exists." };
+  try {
+    await github(`/repos/${repo.owner}/${repo.repo}/actions/workflows/${workflow.id}/dispatches`, { method: "POST", body: JSON.stringify({ ref }) });
+    return { triggered: true, workflow: workflow.name };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Workflow dispatch failed.";
+    if (message.includes("422")) return { triggered: false, workflow: workflow.name, reason: "Workflow does not support workflow_dispatch; relying on its push trigger." };
+    throw error;
+  }
 }
 
 export async function mergePullRequest(repo: RepoRef, prNumber: number) {

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import { hasLiveCredentials } from "@/lib/config";
 import { executeRun } from "@/lib/pipeline";
 import { createRun } from "@/lib/run-store";
 import { assertRepoAllowed } from "@/lib/github";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 export async function POST(request: Request) {
   const body = await request.json() as { repoUrl?: string; bugDescription?: string; demo?: boolean };
@@ -16,6 +18,6 @@ export async function POST(request: Request) {
   }
   const mode = body.demo || !hasLiveCredentials() ? "demo" : "live";
   const run = createRun(body.repoUrl, body.bugDescription, mode);
-  void executeRun(run.id);
+  after(() => executeRun(run.id));
   return NextResponse.json({ runId: run.id, mode }, { status: 202 });
 }

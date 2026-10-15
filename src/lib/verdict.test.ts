@@ -11,4 +11,7 @@ describe("determineVerdict", () => {
   it("returns error on timeout", () => {
     expect(determineVerdict({ timedOut: true, expectedFailures: [], passingAfter: [], newFailures: [] })).toBe("ERROR");
   });
+  it("refuses proof when no failing baseline was observed", () => {
+    expect(determineVerdict({ checkConclusion: "success", baselineObserved: false, expectedFailures: ["a"], passingAfter: ["a"], newFailures: [] })).toBe("NOT_PROVEN");
+  });
 });
