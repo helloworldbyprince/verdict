@@ -33,42 +33,42 @@ index b3c92a1..a8d513f 100644
    }, 0);`;
 
 async function demoPipeline(id: string) {
-  const honestyCase = /missing environment|unfixable|secret|api key/i.test(getRun(id)?.bugDescription ?? "");
-  updateStep(id, "triage", "running", "Reading the repository tree and test files…"); await wait(CONFIG.ui.demoStepMs);
-  updateRun(id, { triage: demoTriage }); updateStep(id, "triage", "done", "Found an off-by-one error in src/cart.js");
-  updateStep(id, "research", "running", "Searching upstream documentation and test patterns…"); await wait(CONFIG.ui.demoStepMs);
-  updateRun(id, { evidence: demoEvidence }); updateStep(id, "research", "done", "Grounded the diagnosis in 2 cited sources");
-  updateStep(id, "patch", "running", "Writing the smallest safe unified diff…"); await wait(CONFIG.ui.demoStepMs);
-  updateRun(id, { diff: demoDiff, branch: `verdict/${id}`, prNumber: 14, prUrl: "https://github.com" }); updateStep(id, "patch", "done", "Created a 1-line fix on an isolated draft PR");
-  updateStep(id, "verify", "running", "GitHub Actions is executing the full test suite…"); await wait(CONFIG.ui.demoStepMs * 1.4);
+  const honestyCase = /missing environment|unfixable|secret|api key/i.test((await getRun(id))?.bugDescription ?? "");
+  await updateStep(id, "triage", "running", "Reading the repository tree and test files…"); await wait(CONFIG.ui.demoStepMs);
+  await updateRun(id, { triage: demoTriage }); await updateStep(id, "triage", "done", "Found an off-by-one error in src/cart.js");
+  await updateStep(id, "research", "running", "Searching upstream documentation and test patterns…"); await wait(CONFIG.ui.demoStepMs);
+  await updateRun(id, { evidence: demoEvidence }); await updateStep(id, "research", "done", "Grounded the diagnosis in 2 cited sources");
+  await updateStep(id, "patch", "running", "Writing the smallest safe unified diff…"); await wait(CONFIG.ui.demoStepMs);
+  await updateRun(id, { diff: demoDiff, branch: `verdict/${id}`, prNumber: 14, prUrl: "https://github.com" }); await updateStep(id, "patch", "done", "Created a 1-line fix on an isolated draft PR");
+  await updateStep(id, "verify", "running", "GitHub Actions is executing the full test suite…"); await wait(CONFIG.ui.demoStepMs * 1.4);
   const verification: VerificationResult = honestyCase
     ? { verdict: "NOT_PROVEN", before: demoTriage.failingTests, after: [], newFailures: ["requires PAYMENT_API_KEY"], conclusion: "failure", detailsUrl: "https://github.com" }
     : { verdict: "PROVEN", before: demoTriage.failingTests, after: demoTriage.failingTests, newFailures: [], conclusion: "success", detailsUrl: "https://github.com" };
-  updateRun(id, { verification, status: "complete" });
-  updateStep(id, "verify", "done", honestyCase ? "CI still fails: missing runtime environment variable" : "3 target tests pass · 0 new failures");
+  await updateRun(id, { verification, status: "complete" });
+  await updateStep(id, "verify", "done", honestyCase ? "CI still fails: missing runtime environment variable" : "3 target tests pass · 0 new failures");
 }
 
 async function livePipeline(id: string) {
-  const run = getRun(id);
+  const run = await getRun(id);
   if (!run) return;
-  updateStep(id, "triage", "running", "Reading the repository tree…");
+  await updateStep(id, "triage", "running", "Reading the repository tree…");
   const context = await getRepoContext(run.repoUrl);
   const triage = await runTriage(context, run.bugDescription);
-  updateRun(id, { triage }); updateStep(id, "triage", "done", `Found ${triage.suspectedFiles.length} suspected file${triage.suspectedFiles.length === 1 ? "" : "s"}`);
-  updateStep(id, "research", "running", "Searching for cited upstream evidence…");
+  await updateRun(id, { triage }); await updateStep(id, "triage", "done", `Found ${triage.suspectedFiles.length} suspected file${triage.suspectedFiles.length === 1 ? "" : "s"}`);
+  await updateStep(id, "research", "running", "Searching for cited upstream evidence…");
   const evidence = await runResearcher(run.bugDescription, triage);
-  updateRun(id, { evidence }); updateStep(id, "research", "done", `Collected ${evidence.length} cited sources`);
-  updateStep(id, "patch", "running", "Generating and validating a minimal diff…");
+  await updateRun(id, { evidence }); await updateStep(id, "research", "done", `Collected ${evidence.length} cited sources`);
+  await updateStep(id, "patch", "running", "Generating and validating a minimal diff…");
   const diff = await runPatcher(context, run.bugDescription, triage, evidence);
   const pr = await createPatchPullRequest(context, id, diff, run.bugDescription.slice(0, 72));
-  updateRun(id, { diff, branch: pr.branch, prNumber: pr.prNumber, prUrl: pr.prUrl }); updateStep(id, "patch", "done", `Opened draft PR #${pr.prNumber}`);
-  updateStep(id, "verify", "running", "Waiting for deterministic GitHub Actions proof…");
+  await updateRun(id, { diff, branch: pr.branch, prNumber: pr.prNumber, prUrl: pr.prUrl }); await updateStep(id, "patch", "done", `Opened draft PR #${pr.prNumber}`);
+  await updateStep(id, "verify", "running", "Waiting for deterministic GitHub Actions proof…");
   const verification = await runVerifier(context, pr.sha, pr.branch, context.headSha, triage);
-  updateRun(id, { verification, status: "complete" }); updateStep(id, "verify", verification.verdict === "ERROR" ? "error" : "done", verification.verdict === "PROVEN" ? "All target tests pass with no new failures" : "CI could not prove the patch");
+  await updateRun(id, { verification, status: "complete" }); await updateStep(id, "verify", verification.verdict === "ERROR" ? "error" : "done", verification.verdict === "PROVEN" ? "All target tests pass with no new failures" : "CI could not prove the patch");
 }
 
 export async function executeRun(id: string) {
-  const run = getRun(id);
+  const run = await getRun(id);
   if (!run) return;
   try {
     await Promise.race([
@@ -77,8 +77,9 @@ export async function executeRun(id: string) {
     ]);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown pipeline error";
-    const active = getRun(id)?.steps.find((step) => step.status === "running");
-    if (active) updateStep(id, active.key, "error", message);
-    updateRun(id, { status: "error", error: message, verification: { verdict: "ERROR", before: getRun(id)?.triage?.failingTests ?? [], after: [], newFailures: [], error: message } });
+    const latest = await getRun(id);
+    const active = latest?.steps.find((step) => step.status === "running");
+    if (active) await updateStep(id, active.key, "error", message);
+    await updateRun(id, { status: "error", error: message, verification: { verdict: "ERROR", before: latest?.triage?.failingTests ?? [], after: [], newFailures: [], error: message } });
   }
 }

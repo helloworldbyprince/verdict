@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Repository is not authorized." }, { status: 403 });
   }
   const mode = body.demo || !hasLiveCredentials() ? "demo" : "live";
-  const run = createRun(body.repoUrl, body.bugDescription, mode);
+  const run = await createRun(body.repoUrl, body.bugDescription, mode);
   after(() => executeRun(run.id));
   return NextResponse.json({ runId: run.id, mode }, { status: 202 });
 }

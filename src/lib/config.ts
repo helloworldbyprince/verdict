@@ -29,6 +29,7 @@ export const CONFIG = {
     runTimeoutMs: 900_000,
     maxDiffLines: 200,
     maxResearchQueries: 3,
+    runStateTtlSeconds: 86_400,
   },
   ui: {
     pageSize: 50,
