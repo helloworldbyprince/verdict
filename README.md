@@ -70,9 +70,9 @@ npm start        # run the production build
 
 ## Architecture
 
-The Next.js 15 App Router frontend polls in-memory run state from route handlers. The orchestrator executes the four stages sequentially. GitHub's REST API supplies repository content, isolated Git objects, draft PRs, check runs, and merge operations. Configuration, token caps, polling intervals, and timeouts live in `src/lib/config.ts`.
+The Next.js 15 App Router frontend polls run state from route handlers. On Vercel, active runs are stored for 24 hours in a project-specific Runtime Cache namespace so polling works across serverless instances; local development uses an in-memory fallback. The orchestrator executes the four stages sequentially. GitHub's REST API supplies repository content, isolated Git objects, draft PRs, check runs, and merge operations. Configuration, token caps, polling intervals, and timeouts live in `src/lib/config.ts`.
 
-Run state is intentionally ephemeral for the hackathon build. Production hardening should move orchestration and run state into a durable queue and database before serving concurrent public traffic.
+Run state is intentionally short-lived for the hackathon build, while verdict history lives in the browser's `localStorage`. Production hardening should move orchestration and run state into a durable queue and database before serving sustained public traffic.
 
 ## License
 
